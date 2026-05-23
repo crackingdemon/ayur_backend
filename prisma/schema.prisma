@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Patient {
+  id              String   @id @default(uuid())
+  name            String
+  age             Int
+  gender          String
+  phone           String
+  bloodGroup      String?
+  allergies       String?
+  pastHistory     String?
+  drugHistory     String?
+  personalHistory String?
+  familyHistory   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  visits          Visit[]
+}
+
+model Visit {
+  id             String   @id @default(uuid())
+  patientId      String
+  date           DateTime @default(now())
+  doctor         String
+  reason         String
+  status         String   @default("Pending") // Pending, Completed, Cancelled
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  modernEMR      ModernEMR?
+  ayurvedicEMR   AyurvedicEMR?
+  diagnosis      Diagnosis?
+}
+
+model ModernEMR {
+  id              String   @id @default(uuid())
+  visitId         String   @unique
+  chiefComplaints String?
+  hpi             String?
+  pulse           String?
+  bp              String?
+  temp            String?
+  systemicExam    String?
+  investigations  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  visit           Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+}
+
+model AyurvedicEMR {
+  id              String   @id @default(uuid())
+  visitId         String   @unique
+  prakruti        String?
+  vikruti         String?
+  sara            String?
+  samhanana       String?
+  pramana         String?
+  satmya          String?
+  satva           String?
+  aharaShakti     String?
+  vyayamaShakti   String?
+  vaya            String?
+  nadi            String?
+  mootra          String?
+  mala            String?
+  jihva           String?
+  shabda          String?
+  sparsha         String?
+  drik            String?
+  aakruti         String?
+  vata            Int?     @default(0)
+  pitta           Int?     @default(0)
+  kapha           Int?     @default(0)
+  affectedDhatu   String?
+  srotodushtiType String?
+  agni            String?
+  ama             String?
+  kostha          String?
+  nidana          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  visit           Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+}
+
+model Diagnosis {
+  id                 String   @id @default(uuid())
+  visitId            String   @unique
+  provisional        String?
+  differential       String?
+  ayurvedicDiagnosis String?
+  samprapti          String?
+  chikitsa           String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  visit              Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+}
