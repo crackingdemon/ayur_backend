@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.inventoryRoutes = void 0;
+const express_1 = require("express");
+const inventory_controller_1 = require("../controllers/inventory.controller");
+const router = (0, express_1.Router)();
+router.get('/search', inventory_controller_1.inventoryController.search.bind(inventory_controller_1.inventoryController));
+router.get('/', inventory_controller_1.inventoryController.getAll.bind(inventory_controller_1.inventoryController));
+router.post('/', inventory_controller_1.inventoryController.create.bind(inventory_controller_1.inventoryController));
+exports.inventoryRoutes = router;

@@ -2,8 +2,17 @@ import { prisma } from '../lib/prisma';
 import { Prisma } from '@prisma/client';
 
 export class PatientService {
-  async getAllPatients() {
+  async getAllPatients(organizationId: string, search?: string) {
+    const whereClause: Prisma.PatientWhereInput = { organizationId };
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search, mode: 'insensitive' as Prisma.QueryMode } },
+        { phone: { contains: search, mode: 'insensitive' as Prisma.QueryMode } },
+      ];
+    }
+
     return prisma.patient.findMany({
+      where: whereClause,
       orderBy: { updatedAt: 'desc' },
       include: {
         visits: {
@@ -14,9 +23,9 @@ export class PatientService {
     });
   }
 
-  async getPatientById(id: string) {
-    return prisma.patient.findUnique({
-      where: { id },
+  async getPatientById(organizationId: string, id: string) {
+    return prisma.patient.findFirst({
+      where: { id, organizationId },
       include: {
         visits: {
           orderBy: { date: 'desc' },
@@ -30,15 +39,23 @@ export class PatientService {
     });
   }
 
-  async createPatient(data: Prisma.PatientCreateInput) {
-    return prisma.patient.create({ data });
+  async createPatient(organizationId: string, data: any) {
+    return prisma.patient.create({ data: { ...data, organizationId } });
+  }
+
+  async updatePatient(organizationId: string, id: string, data: Partial<Prisma.PatientUpdateInput>) {
+    // Only update if it belongs to org
+    return prisma.patient.updateMany({
+      where: { id, organizationId },
+      data
+    }).then(() => this.getPatientById(organizationId, id));
   }
 
   // A method to ensure a patient has at least one visit to attach EMRs to. 
   // In a real app, visits are created when an appointment happens.
-  async getOrCreateLatestVisit(patientId: string) {
+  async getOrCreateLatestVisit(organizationId: string, patientId: string) {
     const latestVisit = await prisma.visit.findFirst({
-      where: { patientId },
+      where: { patientId, organizationId },
       orderBy: { date: 'desc' }
     });
 
@@ -47,6 +64,7 @@ export class PatientService {
     // Create a default "Initial Consultation" visit if none exists
     return prisma.visit.create({
       data: {
+        organizationId,
         patientId,
         doctor: 'Dr. Default',
         reason: 'Initial Consultation',
@@ -76,6 +94,42 @@ export class PatientService {
       update: data,
       create: { ...data, visit: { connect: { id: visitId } } }
     });
+  }
+  async getPatientHistoryPaginated(organizationId: string, patientId: string, page: number = 1, limit: number = 5) {
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      prisma.visit.findMany({
+        where: { patientId, organizationId },
+        skip,
+        take: limit,
+        orderBy: { date: 'desc' },
+        include: {
+          ayurvedicEMR: true,
+          diagnosis: true,
+          prescription: {
+            include: {
+              items: {
+                include: {
+                  inventory: true,
+                }
+              }
+            }
+          }
+        }
+      }),
+      prisma.visit.count({ where: { patientId, organizationId } })
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   }
 }
 

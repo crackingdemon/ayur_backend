@@ -3,13 +3,30 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
 import { patientRoutes } from './routes/patient.routes';
+import { appointmentRoutes } from './routes/appointment.routes';
+import { inventoryRoutes } from './routes/inventory.routes';
+import { prescriptionRoutes } from './routes/prescription.routes';
+import { financeRoutes } from './routes/finance.routes';
+import { dashboardRoutes } from './routes/dashboard.routes';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : ['http://localhost:3000']; // default for local dev
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
 app.use(express.json());
 
 app.get('/api/health', async (req: Request, res: Response) => {
@@ -22,8 +39,18 @@ app.get('/api/health', async (req: Request, res: Response) => {
   }
 });
 
-app.use('/api/patients', patientRoutes);
+import authRoutes from './routes/auth.routes';
+import { requireAuth } from './middlewares/auth.middleware';
 
-app.listen(port, () => {
+app.use('/api/auth', authRoutes);
+
+app.use('/api/patients', requireAuth, patientRoutes);
+app.use('/api/appointments', requireAuth, appointmentRoutes);
+app.use('/api/inventory', requireAuth, inventoryRoutes);
+app.use('/api/prescriptions', requireAuth, prescriptionRoutes);
+app.use('/api/finance', requireAuth, financeRoutes);
+app.use('/api/dashboard', requireAuth, dashboardRoutes);
+
+app.listen(port as number, '0.0.0.0', () => {
   console.log(`Server is running on port ${port}`);
 });

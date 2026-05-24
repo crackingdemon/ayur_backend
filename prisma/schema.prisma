@@ -6,8 +6,37 @@ datasource db {
   provider = "postgresql"
 }
 
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  address     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  users                User[]
+  patients             Patient[]
+  visits               Visit[]
+  prescriptions        Prescription[]
+  inventory            Inventory[]
+  invoices             Invoice[]
+  transactions         FinancialTransaction[]
+}
+
+model User {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  email          String   @unique
+  passwordHash   String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
 model Patient {
   id              String   @id @default(uuid())
+  organizationId  String
   name            String
   age             Int
   gender          String
@@ -21,24 +50,33 @@ model Patient {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   visits          Visit[]
+  invoices        Invoice[]
 }
 
 model Visit {
   id             String   @id @default(uuid())
+  organizationId String
   patientId      String
   date           DateTime @default(now())
   doctor         String
   reason         String
-  status         String   @default("Pending") // Pending, Completed, Cancelled
+  status         String   @default("Scheduled") // Scheduled, Waiting, In Consultation, Completed, Cancelled
+  type           String   @default("Walk-in")   // Walk-in, Online, Call
+  duration       Int      @default(30)          // Duration in minutes
+  checkInTime    DateTime?
+  checkoutTime   DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   
   modernEMR      ModernEMR?
   ayurvedicEMR   AyurvedicEMR?
   diagnosis      Diagnosis?
+  prescription   Prescription?
 }
 
 model ModernEMR {
@@ -105,4 +143,84 @@ model Diagnosis {
   updatedAt          DateTime @updatedAt
 
   visit              Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+}
+
+model Inventory {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  type           String   // Vati, Churna, Asava, Bhasma, Ghrita, Taila, etc.
+  stockCount     Int      @default(0)
+  unit           String   @default("units")
+  price          Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  prescriptionItems PrescriptionItem[]
+}
+
+model Prescription {
+  id             String   @id @default(uuid())
+  organizationId String
+  visitId        String   @unique
+  pathya         String?  // Recommended diet/lifestyle
+  apathya        String?  // Restricted diet/lifestyle
+  vihara         String?  // General lifestyle advice
+  notes          String?
+  status         String   @default("Pending") // Pending, Dispensed
+  followUpDate   DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  visit          Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  items          PrescriptionItem[]
+  invoice        Invoice?
+}
+
+model PrescriptionItem {
+  id                 String   @id @default(uuid())
+  prescriptionId     String
+  inventoryId        String?  // Nullable if entered manually
+  customMedicineName String?  // Used if inventoryId is null
+  dosage             String   // e.g., "1-0-1", "2 tablets"
+  frequency          String?  // e.g., "Twice a day"
+  kala               String?  // e.g., "Pragbhakta", "Adhobhakta", "Before food"
+  anupana            String?  // Vehicle e.g., "Warm Water", "Honey"
+  duration           String   // e.g., "7 days", "1 month"
+  quantity           Int?     // Total units to dispense
+  instructions       String?
+  
+  prescription       Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  inventory          Inventory?   @relation(fields: [inventoryId], references: [id], onDelete: SetNull)
+}
+
+model Invoice {
+  id             String   @id @default(uuid())
+  organizationId String
+  patientId      String
+  prescriptionId String?  @unique
+  totalAmount    Float
+  status         String   @default("Unpaid") // Unpaid, Paid
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  prescription   Prescription? @relation(fields: [prescriptionId], references: [id], onDelete: SetNull)
+}
+
+model FinancialTransaction {
+  id             String   @id @default(uuid())
+  organizationId String
+  type           String   // INCOME, EXPENSE
+  amount         Float
+  category       String   // Pharmacy Sales, Inventory Restock, Salary, etc.
+  description    String?
+  date           DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
