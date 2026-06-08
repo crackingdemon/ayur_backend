@@ -20,8 +20,8 @@ class AppointmentService {
         else if (!patientId) {
             throw new Error("Patient ID is required for existing patients.");
         }
-        // Combine date and time to create a valid DateTime for Visit
-        const dateTime = new Date(`${data.date}T${data.time}:00Z`);
+        // Check if data.date is already an ISO string containing time information
+        const dateTime = data.date.includes('T') ? new Date(data.date) : new Date(`${data.date}T${data.time}:00Z`);
         const visit = await prisma_1.prisma.visit.create({
             data: {
                 organizationId,

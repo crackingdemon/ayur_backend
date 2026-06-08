@@ -192,6 +192,11 @@ model PrescriptionItem {
   quantity           Int?     // Total units to dispense
   instructions       String?
   
+  // Invoicing fields stored at dispense time
+  unitPrice          Float?
+  discount           Float?
+  totalPrice         Float?
+  
   prescription       Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
   inventory          Inventory?   @relation(fields: [inventoryId], references: [id], onDelete: SetNull)
 }
@@ -201,6 +206,8 @@ model Invoice {
   organizationId String
   patientId      String
   prescriptionId String?  @unique
+  subTotal       Float    @default(0)
+  discount       Float    @default(0)
   totalAmount    Float
   status         String   @default("Unpaid") // Unpaid, Paid
   createdAt      DateTime @default(now())

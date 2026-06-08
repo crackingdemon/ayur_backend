@@ -76,8 +76,13 @@ export class PrescriptionController {
     try {
       const orgId = req.user!.organizationId;
       const { id } = req.params;
-      const { customPrices } = req.body;
-      const invoice = await prescriptionService.dispenseAndBill(orgId, id as string, customPrices);
+      const { itemsBilling } = req.body;
+      
+      if (!itemsBilling || typeof itemsBilling !== 'object') {
+        return res.status(400).json({ error: 'itemsBilling object is required' });
+      }
+
+      const invoice = await prescriptionService.dispenseAndBill(orgId, id as string, itemsBilling);
       res.json(invoice);
     } catch (error: any) {
       console.error('Error dispensing prescription:', error);
