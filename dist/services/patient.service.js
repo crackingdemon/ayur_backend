@@ -4,7 +4,7 @@ exports.patientService = exports.PatientService = void 0;
 const prisma_1 = require("../lib/prisma");
 class PatientService {
     async getAllPatients(organizationId, search) {
-        const whereClause = { organizationId };
+        const whereClause = { organizationId, deletedAt: null };
         if (search) {
             whereClause.OR = [
                 { name: { contains: search, mode: 'insensitive' } },
@@ -24,7 +24,7 @@ class PatientService {
     }
     async getPatientById(organizationId, id) {
         return prisma_1.prisma.patient.findFirst({
-            where: { id, organizationId },
+            where: { id, organizationId, deletedAt: null },
             include: {
                 visits: {
                     orderBy: { date: 'desc' },
@@ -66,21 +66,39 @@ class PatientService {
             }
         });
     }
-    async updateModernEMR(visitId, data) {
+    async updateModernEMR(organizationId, visitId, data) {
+        const visit = await prisma_1.prisma.visit.findFirst({
+            where: { id: visitId, organizationId },
+        });
+        if (!visit) {
+            throw new Error("Visit not found or does not belong to this organization");
+        }
         return prisma_1.prisma.modernEMR.upsert({
             where: { visitId },
             update: data,
             create: { ...data, visit: { connect: { id: visitId } } }
         });
     }
-    async updateAyurvedicEMR(visitId, data) {
+    async updateAyurvedicEMR(organizationId, visitId, data) {
+        const visit = await prisma_1.prisma.visit.findFirst({
+            where: { id: visitId, organizationId },
+        });
+        if (!visit) {
+            throw new Error("Visit not found or does not belong to this organization");
+        }
         return prisma_1.prisma.ayurvedicEMR.upsert({
             where: { visitId },
             update: data,
             create: { ...data, visit: { connect: { id: visitId } } }
         });
     }
-    async updateDiagnosis(visitId, data) {
+    async updateDiagnosis(organizationId, visitId, data) {
+        const visit = await prisma_1.prisma.visit.findFirst({
+            where: { id: visitId, organizationId },
+        });
+        if (!visit) {
+            throw new Error("Visit not found or does not belong to this organization");
+        }
         return prisma_1.prisma.diagnosis.upsert({
             where: { visitId },
             update: data,

@@ -12,43 +12,60 @@ export class AppointmentService {
     date: string;
     time: string;
     duration: number;
+    doctorId: string; // Now required
+    facilityId?: string;
     reason: string;
     source: string;
   }) {
-    let patientId = data.patientId;
-
-    if (data.isNewPatient) {
-      const patient = await prisma.patient.create({
-        data: {
-          organizationId,
-          name: data.name,
-          age: data.age,
-          gender: data.gender,
-          phone: data.phone,
-        },
-      });
-      patientId = patient.id;
-    } else if (!patientId) {
-      throw new Error("Patient ID is required for existing patients.");
-    }
-
     // Check if data.date is already an ISO string containing time information
     const dateTime = data.date.includes('T') ? new Date(data.date) : new Date(`${data.date}T${data.time}:00Z`);
 
-    const visit = await prisma.visit.create({
-      data: {
-        organizationId,
-        patientId: patientId as string,
-        date: dateTime,
-        doctor: 'Dr. Default', // In a real app, you'd get this from the auth token or request
-        reason: data.reason,
-        type: data.source,
-        duration: data.duration,
-        status: 'Scheduled',
-      },
-    });
+    return await prisma.$transaction(async (tx) => {
+      let patientId = data.patientId;
 
-    return visit;
+      if (data.isNewPatient) {
+        const patient = await tx.patient.create({
+          data: {
+            organizationId,
+            name: data.name,
+            age: data.age,
+            gender: data.gender,
+            phone: data.phone,
+          },
+        });
+        patientId = patient.id;
+      } else if (!patientId) {
+        throw new Error("Patient ID is required for existing patients.");
+      }
+      if (!data.doctorId) {
+        throw new Error("Doctor assignment is required.");
+      }
+
+      let doctorName = '';
+      const doctorUser = await tx.user.findUnique({ where: { id: data.doctorId } });
+      if (doctorUser) {
+        doctorName = doctorUser.name;
+      } else {
+        throw new Error("Invalid doctor ID provided.");
+      }
+
+      const visit = await tx.visit.create({
+        data: {
+          organizationId,
+          facilityId: data.facilityId || null,
+          patientId: patientId as string,
+          date: dateTime,
+          doctor: doctorName,
+          doctorId: data.doctorId,
+          reason: data.reason,
+          type: data.source,
+          duration: data.duration,
+          status: 'Scheduled',
+        },
+      });
+
+      return visit;
+    });
   }
 
   async getAppointmentsToday(organizationId: string, dateString?: string) {

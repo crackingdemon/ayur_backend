@@ -14,6 +14,8 @@ const bookAppointmentSchema = z.object({
   duration: z.number(),
   reason: z.string().min(1, "Reason is required"),
   source: z.string(),
+  facilityId: z.string().optional(),
+  doctorId: z.string().min(1, "Doctor assignment is required"),
 });
 
 export class AppointmentController {

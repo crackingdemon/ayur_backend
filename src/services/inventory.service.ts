@@ -62,14 +62,29 @@ export class InventoryService {
     });
   }
 
-  async updateStock(organizationId: string, id: string, amount: number) {
-    return await prisma.inventory.updateMany({
-      where: { id, organizationId },
-      data: {
-        stockCount: {
-          increment: amount
+  async updateStock(organizationId: string, id: string, amount: number, userId: string, reason: string = "Manual Adjustment") {
+    return await prisma.$transaction(async (tx) => {
+      const updated = await tx.inventory.update({
+        where: { id, organizationId },
+        data: {
+          stockCount: {
+            increment: amount
+          }
         }
-      }
+      });
+
+      await tx.inventoryTransaction.create({
+        data: {
+          organizationId,
+          inventoryId: id,
+          userId,
+          type: amount > 0 ? "RESTOCK" : "ADJUSTMENT",
+          quantityChange: amount,
+          reason
+        }
+      });
+
+      return updated;
     });
   }
 }

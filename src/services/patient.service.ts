@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 
 export class PatientService {
   async getAllPatients(organizationId: string, search?: string) {
-    const whereClause: Prisma.PatientWhereInput = { organizationId };
+    const whereClause: Prisma.PatientWhereInput = { organizationId, deletedAt: null };
     if (search) {
       whereClause.OR = [
         { name: { contains: search, mode: 'insensitive' as Prisma.QueryMode } },
@@ -25,7 +25,7 @@ export class PatientService {
 
   async getPatientById(organizationId: string, id: string) {
     return prisma.patient.findFirst({
-      where: { id, organizationId },
+      where: { id, organizationId, deletedAt: null },
       include: {
         visits: {
           orderBy: { date: 'desc' },
@@ -72,7 +72,15 @@ export class PatientService {
     });
   }
 
-  async updateModernEMR(visitId: string, data: Omit<Prisma.ModernEMRCreateInput, 'visit'>) {
+  async updateModernEMR(organizationId: string, visitId: string, data: Omit<Prisma.ModernEMRCreateInput, 'visit'>) {
+    const visit = await prisma.visit.findFirst({
+      where: { id: visitId, organizationId },
+    });
+    
+    if (!visit) {
+      throw new Error("Visit not found or does not belong to this organization");
+    }
+
     return prisma.modernEMR.upsert({
       where: { visitId },
       update: data,
@@ -80,7 +88,15 @@ export class PatientService {
     });
   }
 
-  async updateAyurvedicEMR(visitId: string, data: Omit<Prisma.AyurvedicEMRCreateInput, 'visit'>) {
+  async updateAyurvedicEMR(organizationId: string, visitId: string, data: Omit<Prisma.AyurvedicEMRCreateInput, 'visit'>) {
+    const visit = await prisma.visit.findFirst({
+      where: { id: visitId, organizationId },
+    });
+    
+    if (!visit) {
+      throw new Error("Visit not found or does not belong to this organization");
+    }
+
     return prisma.ayurvedicEMR.upsert({
       where: { visitId },
       update: data,
@@ -88,7 +104,15 @@ export class PatientService {
     });
   }
 
-  async updateDiagnosis(visitId: string, data: Omit<Prisma.DiagnosisCreateInput, 'visit'>) {
+  async updateDiagnosis(organizationId: string, visitId: string, data: Omit<Prisma.DiagnosisCreateInput, 'visit'>) {
+    const visit = await prisma.visit.findFirst({
+      where: { id: visitId, organizationId },
+    });
+    
+    if (!visit) {
+      throw new Error("Visit not found or does not belong to this organization");
+    }
+
     return prisma.diagnosis.upsert({
       where: { visitId },
       update: data,

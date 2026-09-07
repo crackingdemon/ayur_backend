@@ -70,10 +70,11 @@ class PrescriptionController {
     async dispense(req, res) {
         try {
             const orgId = req.user.organizationId;
+            const userId = req.user.userId; // extracted from auth token
             const { id } = req.params;
-            const { customPrices } = req.body;
-            const invoice = await prescription_service_1.prescriptionService.dispenseAndBill(orgId, id, customPrices);
-            res.json(invoice);
+            const { dispensedItems } = req.body;
+            const result = await prescription_service_1.prescriptionService.dispensePrescription(orgId, id, userId, dispensedItems);
+            res.json(result);
         }
         catch (error) {
             console.error('Error dispensing prescription:', error);

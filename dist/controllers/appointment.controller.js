@@ -15,6 +15,8 @@ const bookAppointmentSchema = zod_1.z.object({
     duration: zod_1.z.number(),
     reason: zod_1.z.string().min(1, "Reason is required"),
     source: zod_1.z.string(),
+    facilityId: zod_1.z.string().optional(),
+    doctorId: zod_1.z.string().min(1, "Doctor assignment is required"),
 });
 class AppointmentController {
     async book(req, res) {

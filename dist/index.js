@@ -13,6 +13,10 @@ const inventory_routes_1 = require("./routes/inventory.routes");
 const prescription_routes_1 = require("./routes/prescription.routes");
 const finance_routes_1 = require("./routes/finance.routes");
 const dashboard_routes_1 = require("./routes/dashboard.routes");
+const billing_routes_1 = require("./routes/billing.routes");
+const facility_routes_1 = __importDefault(require("./routes/facility.routes"));
+const user_routes_1 = require("./routes/user.routes");
+const panchakarma_routes_1 = require("./routes/panchakarma.routes");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 5000;
@@ -49,6 +53,21 @@ app.use('/api/inventory', auth_middleware_1.requireAuth, inventory_routes_1.inve
 app.use('/api/prescriptions', auth_middleware_1.requireAuth, prescription_routes_1.prescriptionRoutes);
 app.use('/api/finance', auth_middleware_1.requireAuth, finance_routes_1.financeRoutes);
 app.use('/api/dashboard', auth_middleware_1.requireAuth, dashboard_routes_1.dashboardRoutes);
+app.use('/api/billing', auth_middleware_1.requireAuth, billing_routes_1.billingRoutes);
+app.use('/api/facilities', auth_middleware_1.requireAuth, facility_routes_1.default);
+app.use('/api/users', auth_middleware_1.requireAuth, user_routes_1.userRoutes);
+app.use('/api/panchakarma', auth_middleware_1.requireAuth, panchakarma_routes_1.panchakarmaRoutes);
+// Database connection check
+app.get('/api/health', async (req, res) => {
+    try {
+        await prisma_1.prisma.$queryRaw `SELECT 1`;
+        res.json({ status: 'ok', database: 'connected' });
+    }
+    catch (error) {
+        console.error('Database connection error:', error);
+        res.status(500).json({ status: 'error', database: 'disconnected' });
+    }
+});
 app.listen(port, '0.0.0.0', () => {
     console.log(`Server is running on port ${port}`);
 });

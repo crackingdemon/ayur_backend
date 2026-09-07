@@ -4,10 +4,18 @@ exports.prescriptionService = exports.PrescriptionService = void 0;
 const prisma_1 = require("../lib/prisma");
 class PrescriptionService {
     async savePrescription(organizationId, visitId, data) {
+        // Verify the visit belongs to the correct organization to prevent IDOR
+        const visit = await prisma_1.prisma.visit.findFirst({
+            where: { id: visitId, organizationId },
+        });
+        if (!visit) {
+            throw new Error("Visit not found or does not belong to this organization");
+        }
         // We use an upsert to either create a new prescription or update an existing one for the visit
         const prescription = await prisma_1.prisma.prescription.upsert({
-            where: { visitId }, // Assuming visitId is strictly 1-to-1 with organizationId checked prior. But better to just let Prisma do it and check ownership if needed. Since Prisma upsert requires unique constraint on visitId. We can just add organizationId to create/update.
+            where: { visitId }, // Unique constraint handles the match
             create: {
+                patientId: visit.patientId,
                 organizationId,
                 visitId,
                 pathya: data.pathya,
@@ -92,13 +100,12 @@ class PrescriptionService {
             }
         };
     }
-    async dispenseAndBill(organizationId, prescriptionId, customPrices) {
+    async dispensePrescription(organizationId, prescriptionId, userId, dispensedItems) {
         return await prisma_1.prisma.$transaction(async (tx) => {
             // 1. Get prescription with items and current inventory stock
             const prescription = await tx.prescription.findFirst({
                 where: { id: prescriptionId, organizationId },
                 include: {
-                    visit: true,
                     items: {
                         include: { inventory: true }
                     }
@@ -108,54 +115,51 @@ class PrescriptionService {
                 throw new Error("Prescription not found");
             if (prescription.status === "Dispensed")
                 throw new Error("Prescription is already dispensed");
-            let totalAmount = 0;
-            // 2. Process each item for stock deduction and price calculation
+            // 2. Process each item for atomic stock deduction
             for (const item of prescription.items) {
+                const dispensedData = dispensedItems?.[item.id];
+                const quantity = dispensedData?.quantity ?? (item.quantity || 0);
+                // Deduct stock if it's an inventory item
                 if (item.inventoryId && item.inventory) {
-                    if (item.quantity) {
-                        // Deduct stock
-                        await tx.inventory.update({
-                            where: { id: item.inventoryId },
-                            data: { stockCount: { decrement: item.quantity } }
+                    if (quantity > 0) {
+                        // Phase 4: Atomic update to prevent race conditions
+                        const updatedInv = await tx.inventory.updateMany({
+                            where: {
+                                id: item.inventoryId,
+                                stockCount: { gte: quantity } // Ensure stock is sufficient atomically
+                            },
+                            data: { stockCount: { decrement: quantity } }
                         });
-                        // Calculate price from inventory (assuming price is per unit)
-                        totalAmount += (item.inventory.price * item.quantity);
+                        if (updatedInv.count === 0) {
+                            throw new Error(`Insufficient stock for ${item.inventory.name} (Requested: ${quantity})`);
+                        }
+                        // Phase 4: Log InventoryTransaction
+                        await tx.inventoryTransaction.create({
+                            data: {
+                                organizationId,
+                                inventoryId: item.inventoryId,
+                                userId: userId,
+                                type: "SALE",
+                                quantityChange: -quantity,
+                                reason: `Dispensed for Prescription ${prescription.id}`
+                            }
+                        });
                     }
                 }
-                else {
-                    // Custom item or no inventory found
-                    // Use price from customPrices payload if provided
-                    if (customPrices && customPrices[item.id]) {
-                        totalAmount += customPrices[item.id];
-                    }
+                // Update PrescriptionItem with actually dispensed quantity
+                if (quantity !== item.quantity) {
+                    await tx.prescriptionItem.update({
+                        where: { id: item.id },
+                        data: { quantity }
+                    });
                 }
             }
-            // 3. Create Invoice
-            const invoice = await tx.invoice.create({
-                data: {
-                    organizationId,
-                    patientId: prescription.visit.patientId,
-                    prescriptionId: prescription.id,
-                    totalAmount,
-                    status: "Paid" // Auto-paid as requested by user
-                }
-            });
-            // 4. Create Financial Transaction
-            await tx.financialTransaction.create({
-                data: {
-                    organizationId,
-                    type: "INCOME",
-                    amount: totalAmount,
-                    category: "Pharmacy Sales",
-                    description: `Dispensed Prescription ${prescription.id}`
-                }
-            });
-            // 5. Update Prescription Status
-            await tx.prescription.updateMany({
-                where: { id: prescription.id, organizationId },
+            // 3. Update Prescription Status
+            await tx.prescription.update({
+                where: { id: prescription.id },
                 data: { status: "Dispensed" }
             });
-            return invoice;
+            return { success: true, message: "Prescription dispensed successfully" };
         });
     }
 }

@@ -30,23 +30,37 @@ class AuthService {
             });
             const user = await tx.user.create({
                 data: {
-                    organizationId: org.id,
                     name: doctorName,
                     email,
                     passwordHash,
                 }
             });
-            return { org, user };
+            const member = await tx.organizationMember.create({
+                data: {
+                    userId: user.id,
+                    organizationId: org.id,
+                    role: 'ADMIN' // The first user of an org is an Admin
+                }
+            });
+            return { org, user, member };
         });
         // Generate JWT
-        const token = jsonwebtoken_1.default.sign({ userId: result.user.id, organizationId: result.org.id }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jsonwebtoken_1.default.sign({
+            userId: result.user.id,
+            organizationId: result.org.id,
+            role: result.member.role
+        }, JWT_SECRET, { expiresIn: '7d' });
         return { token, user: result.user, organization: result.org };
     }
     async login(data) {
         const { email, password } = data;
         const user = await prisma_1.prisma.user.findUnique({
             where: { email },
-            include: { organization: true }
+            include: {
+                memberships: {
+                    include: { organization: true }
+                }
+            }
         });
         if (!user) {
             throw new Error('Invalid email or password');
@@ -55,9 +69,22 @@ class AuthService {
         if (!isValid) {
             throw new Error('Invalid email or password');
         }
+        if (user.memberships.length === 0) {
+            throw new Error('User does not belong to any organization');
+        }
+        // Default to the first organization membership for now
+        const activeMembership = user.memberships[0];
         // Generate JWT
-        const token = jsonwebtoken_1.default.sign({ userId: user.id, organizationId: user.organizationId }, JWT_SECRET, { expiresIn: '7d' });
-        return { token, user, organization: user.organization };
+        const token = jsonwebtoken_1.default.sign({
+            userId: user.id,
+            organizationId: activeMembership.organizationId,
+            role: activeMembership.role
+        }, JWT_SECRET, { expiresIn: '7d' });
+        return {
+            token,
+            user: { ...user, role: activeMembership.role },
+            organization: activeMembership.organization
+        };
     }
 }
 exports.AuthService = AuthService;

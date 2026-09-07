@@ -6,6 +6,13 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+  ADMIN
+  DOCTOR
+  RECEPTIONIST
+  PHARMACIST
+}
+
 model Organization {
   id          String   @id @default(uuid())
   name        String
@@ -13,25 +20,80 @@ model Organization {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  users                User[]
+  members              OrganizationMember[]
   patients             Patient[]
   visits               Visit[]
   prescriptions        Prescription[]
   inventory            Inventory[]
   invoices             Invoice[]
   transactions         FinancialTransaction[]
+  inventoryLedger      InventoryTransaction[]
+  facilities           Facility[]
+  panchakarma          PanchakarmaTreatment[]
+}
+
+model Facility {
+  id             String       @id @default(uuid())
+  organizationId String
+  name           String
+  type           String       @default("CLINIC")
+  address        String?
+  phone          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  visits         Visit[]
+  inventory      Inventory[]
+  prescriptions  Prescription[]
+  invoices       Invoice[]
+  users          UserFacilityAccess[]
+  transactions   FinancialTransaction[]
+  inventoryLedger InventoryTransaction[]
+  panchakarma    PanchakarmaTreatment[]
+}
+
+
+
+model UserFacilityAccess {
+  userId     String
+  facilityId String
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  
+  @@id([userId, facilityId])
+}
+
+model OrganizationMember {
+  id             String   @id @default(uuid())
+  userId         String
+  organizationId String
+  role           UserRole @default(RECEPTIONIST)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
 }
 
 model User {
   id             String   @id @default(uuid())
-  organizationId String
   name           String
   email          String   @unique
   passwordHash   String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberships    OrganizationMember[]
+  inventoryTransactions InventoryTransaction[]
+  facilityAccess        UserFacilityAccess[]
+  doctorVisits          Visit[] @relation("DoctorVisits")
 }
 
 model Patient {
@@ -49,18 +111,24 @@ model Patient {
   familyHistory   String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   visits          Visit[]
   invoices        Invoice[]
+  prescriptions   Prescription[]
+  panchakarma     PanchakarmaTreatment[]
 }
 
 model Visit {
   id             String   @id @default(uuid())
   organizationId String
+  facilityId     String?
   patientId      String
   date           DateTime @default(now())
   doctor         String
+  doctorId       String?  // Links to an actual doctor account
+  doctorUser     User?    @relation("DoctorVisits", fields: [doctorId], references: [id])
   reason         String
   status         String   @default("Scheduled") // Scheduled, Waiting, In Consultation, Completed, Cancelled
   type           String   @default("Walk-in")   // Walk-in, Online, Call
@@ -71,12 +139,14 @@ model Visit {
   updatedAt      DateTime @updatedAt
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facility       Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   
   modernEMR      ModernEMR?
   ayurvedicEMR   AyurvedicEMR?
   diagnosis      Diagnosis?
   prescription   Prescription?
+  panchakarma    PanchakarmaTreatment[]
 }
 
 model ModernEMR {
@@ -148,6 +218,7 @@ model Diagnosis {
 model Inventory {
   id             String   @id @default(uuid())
   organizationId String
+  facilityId     String?
   name           String
   type           String   // Vati, Churna, Asava, Bhasma, Ghrita, Taila, etc.
   stockCount     Int      @default(0)
@@ -157,13 +228,17 @@ model Inventory {
   updatedAt      DateTime @updatedAt
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facility       Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   prescriptionItems PrescriptionItem[]
+  transactions   InventoryTransaction[]
 }
 
 model Prescription {
   id             String   @id @default(uuid())
-  organizationId String
+  patientId      String
   visitId        String   @unique
+  organizationId String
+  facilityId     String?
   pathya         String?  // Recommended diet/lifestyle
   apathya        String?  // Restricted diet/lifestyle
   vihara         String?  // General lifestyle advice
@@ -173,8 +248,10 @@ model Prescription {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   visit          Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facility       Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   items          PrescriptionItem[]
   invoice        Invoice?
 }
@@ -201,26 +278,46 @@ model PrescriptionItem {
   inventory          Inventory?   @relation(fields: [inventoryId], references: [id], onDelete: SetNull)
 }
 
+model InvoiceItem {
+  id             String   @id @default(uuid())
+  invoiceId      String
+  description    String   // "Consultation Fee", "Ashwagandha Churna", etc.
+  quantity       Int      @default(1)
+  unitPrice      Float
+  discount       Float    @default(0)
+  totalPrice     Float
+  
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
 model Invoice {
   id             String   @id @default(uuid())
   organizationId String
+  facilityId     String?
   patientId      String
   prescriptionId String?  @unique
   subTotal       Float    @default(0)
   discount       Float    @default(0)
   totalAmount    Float
-  status         String   @default("Unpaid") // Unpaid, Paid
+  status         String   @default("PENDING") // PENDING, PAID, CANCELLED
+  paymentMethod  String?
+  date           DateTime @default(now())
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  facility       Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
   prescription   Prescription? @relation(fields: [prescriptionId], references: [id], onDelete: SetNull)
+  panchakarmaId  String?      @unique
+  panchakarma    PanchakarmaTreatment? @relation(fields: [panchakarmaId], references: [id], onDelete: SetNull)
+  items          InvoiceItem[]
 }
 
 model FinancialTransaction {
   id             String   @id @default(uuid())
   organizationId String
+  facilityId     String?
   type           String   // INCOME, EXPENSE
   amount         Float
   category       String   // Pharmacy Sales, Inventory Restock, Salary, etc.
@@ -230,4 +327,57 @@ model FinancialTransaction {
   updatedAt      DateTime @updatedAt
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facility       Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+}
+
+model InventoryTransaction {
+  id             String   @id @default(uuid())
+  organizationId String
+  facilityId     String?
+  inventoryId    String
+  userId         String
+  type           String   // SALE, RESTOCK, ADJUSTMENT, EXPIRED
+  quantityChange Int      // positive or negative
+  reason         String?
+  createdAt      DateTime @default(now())
+  
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facility       Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  inventory      Inventory    @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id])
+}
+
+model PanchakarmaTreatment {
+  id             String   @id @default(uuid())
+  patientId      String
+  visitId        String?
+  organizationId String
+  facilityId     String?
+  name           String   // e.g., "Vamana", "Virechana"
+  startDate      DateTime? 
+  totalDays      Int
+  status         String   @default("Active") // Active, Completed, Cancelled
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  visit          Visit?       @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facility       Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  invoice        Invoice?
+
+  days           PanchakarmaDay[]
+}
+
+model PanchakarmaDay {
+  id             String   @id @default(uuid())
+  treatmentId    String
+  dayNumber      Int      // e.g. Day 1, Day 2
+  date           DateTime? // The planned or executed date
+  notes          String?  // Specific instructions for this day
+  status         String   @default("Pending") // Pending, Completed, Missed
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  treatment      PanchakarmaTreatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
 }

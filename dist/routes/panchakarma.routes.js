@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.panchakarmaRoutes = void 0;
+const express_1 = require("express");
+const panchakarma_controller_1 = require("../controllers/panchakarma.controller");
+const router = (0, express_1.Router)();
+const panchakarmaController = new panchakarma_controller_1.PanchakarmaController();
+router.get('/', panchakarmaController.getTreatments);
+router.get('/:id', panchakarmaController.getTreatmentById);
+router.post('/', panchakarmaController.createTreatment);
+router.put('/:id/day/:dayId', panchakarmaController.updateDay);
+router.post('/:id/complete', panchakarmaController.completeTreatment);
+exports.panchakarmaRoutes = router;

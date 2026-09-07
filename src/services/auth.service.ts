@@ -31,19 +31,30 @@ export class AuthService {
 
       const user = await tx.user.create({
         data: {
-          organizationId: org.id,
           name: doctorName,
           email,
           passwordHash,
         }
       });
 
-      return { org, user };
+      const member = await tx.organizationMember.create({
+        data: {
+          userId: user.id,
+          organizationId: org.id,
+          role: 'ADMIN' // The first user of an org is an Admin
+        }
+      });
+
+      return { org, user, member };
     });
 
     // Generate JWT
     const token = jwt.sign(
-      { userId: result.user.id, organizationId: result.org.id },
+      { 
+        userId: result.user.id, 
+        organizationId: result.org.id,
+        role: result.member.role
+      },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -56,7 +67,11 @@ export class AuthService {
 
     const user = await prisma.user.findUnique({
       where: { email },
-      include: { organization: true }
+      include: { 
+        memberships: {
+          include: { organization: true }
+        }
+      }
     });
 
     if (!user) {
@@ -68,14 +83,29 @@ export class AuthService {
       throw new Error('Invalid email or password');
     }
 
+    if (user.memberships.length === 0) {
+      throw new Error('User does not belong to any organization');
+    }
+
+    // Default to the first organization membership for now
+    const activeMembership = user.memberships[0];
+
     // Generate JWT
     const token = jwt.sign(
-      { userId: user.id, organizationId: user.organizationId },
+      { 
+        userId: user.id, 
+        organizationId: activeMembership.organizationId,
+        role: activeMembership.role
+      },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    return { token, user, organization: user.organization };
+    return { 
+      token, 
+      user: { ...user, role: activeMembership.role }, 
+      organization: activeMembership.organization 
+    };
   }
 }
 
