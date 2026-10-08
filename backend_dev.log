@@ -88,3 +88,9 @@ See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode de
 ◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
 [2026-10-08T21:36:27.738Z] [32minfo[39m: Server is running on port 5001 {"service":"vaidya-os-backend"}
 [32m[nodemon] clean exit - waiting for changes before restart[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+◇ injected env (3) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+[2026-10-08T21:44:30.000Z] [32minfo[39m: Server is running on port 5001 {"service":"vaidya-os-backend"}
+[32m[nodemon] clean exit - waiting for changes before restart[39m
