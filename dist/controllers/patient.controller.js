@@ -62,16 +62,17 @@ const diagnosisSchema = zod_1.z.object({
     chikitsa: zod_1.z.string().optional(),
 });
 class PatientController {
-    async getAll(req, res) {
+    async getAll(req, res, next) {
         try {
             const orgId = req.user.organizationId;
             const search = req.query.search;
-            const patients = await patient_service_1.patientService.getAllPatients(orgId, search);
-            res.json(patients);
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 50;
+            const result = await patient_service_1.patientService.getAllPatients(orgId, search, page, limit);
+            res.json(result);
         }
         catch (error) {
-            console.error('Error fetching patients:', error);
-            res.status(500).json({ error: 'Internal Server Error' });
+            next(error);
         }
     }
     async getById(req, res) {

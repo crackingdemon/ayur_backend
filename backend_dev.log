@@ -1,0 +1,90 @@
+
+> backend@1.0.0 dev
+> nodemon src/index.ts
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: ts,json[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+◇ injected env (3) from .env // tip: ⌘ override existing { override: true }
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+Server is running on port 5001
+(node:79400) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Login error: Error: Invalid email or password
+    at AuthService.login (/Users/souravraj/Documents/PIKACHU DEV/vaidyaos/ayur_backend/src/services/auth.service.ts:78:13)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async login (/Users/souravraj/Documents/PIKACHU DEV/vaidyaos/ayur_backend/src/controllers/auth.controller.ts:23:34)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+◇ injected env (3) from .env // tip: ⌘ override existing { override: true }
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+Server is running on port 5001
+[32m[nodemon] clean exit - waiting for changes before restart[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+◇ injected env (3) from .env // tip: ⌘ override existing { override: true }
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+Server is running on port 5001
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+◇ injected env (3) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+Server is running on port 5001
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+◇ injected env (3) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+Server is running on port 5001
+[32m[nodemon] clean exit - waiting for changes before restart[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+◇ injected env (3) from .env // tip: ⌘ override existing { override: true }
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+Server is running on port 5001
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+◇ injected env (3) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+[2026-10-08T21:27:27.700Z] [32minfo[39m: Server is running on port 5001 {"service":"vaidya-os-backend"}
+[32m[nodemon] clean exit - waiting for changes before restart[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+◇ injected env (3) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+[2026-10-08T21:27:44.922Z] [32minfo[39m: Server is running on port 5001 {"service":"vaidya-os-backend"}
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+◇ injected env (3) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+[2026-10-08T21:29:09.378Z] [32minfo[39m: Server is running on port 5001 {"service":"vaidya-os-backend"}
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+◇ injected env (3) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+[2026-10-08T21:29:18.871Z] [32minfo[39m: Server is running on port 5001 {"service":"vaidya-os-backend"}
+[2026-10-08T21:32:15.812Z] [31merror[39m: Unhandled Exception: Not allowed by CORS {"service":"vaidya-os-backend","stack":"Error: Not allowed by CORS\n    at origin (/Users/souravraj/Documents/PIKACHU DEV/vaidyaos/ayur_backend/src/index.ts:36:16)\n    at /Users/souravraj/Documents/PIKACHU DEV/vaidyaos/ayur_backend/node_modules/cors/lib/index.js:219:13\n    at optionsCallback (/Users/souravraj/Documents/PIKACHU DEV/vaidyaos/ayur_backend/node_modules/cors/lib/index.js:199:9)\n    at corsMiddleware (/Users/souravraj/Documents/PIKACHU DEV/vaidyaos/ayur_backend/node_modules/cors/lib/index.js:204:7)\n    at Layer.handleRequest (/Users/souravraj/Documents/PIKACHU DEV/vaidyaos/ayur_backend/node_modules/router/lib/layer.js:152:17)\n    at trimPrefix (/Users/souravraj/Documents/PIKACHU DEV/vaidyaos/ayur_backend/node_modules/router/index.js:342:13)\n    at /Users/souravraj/Documents/PIKACHU DEV/vaidyaos/ayur_backend/node_modules/router/index.js:297:9\n    at processParams (/Users/souravraj/Documents/PIKACHU DEV/vaidyaos/ayur_backend/node_modules/router/index.js:582:12)\n    at next (/Users/souravraj/Documents/PIKACHU DEV/vaidyaos/ayur_backend/node_modules/router/index.js:291:5)\n    at internalNext (/Users/souravraj/Documents/PIKACHU DEV/vaidyaos/ayur_backend/node_modules/helmet/index.cjs:558:6)","path":"/api/facilities","method":"GET","ip":"127.0.0.1"}
+(node:84068) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+◇ injected env (3) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+[2026-10-08T21:36:27.738Z] [32minfo[39m: Server is running on port 5001 {"service":"vaidya-os-backend"}
+[32m[nodemon] clean exit - waiting for changes before restart[39m

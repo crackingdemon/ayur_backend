@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma';
 import { Prisma } from '@prisma/client';
 
 export class PatientService {
-  async getAllPatients(organizationId: string, search?: string) {
+  async getAllPatients(organizationId: string, search?: string, page: number = 1, limit: number = 50) {
     const whereClause: Prisma.PatientWhereInput = { organizationId, deletedAt: null };
     if (search) {
       whereClause.OR = [
@@ -11,16 +11,33 @@ export class PatientService {
       ];
     }
 
-    return prisma.patient.findMany({
-      where: whereClause,
-      orderBy: { updatedAt: 'desc' },
-      include: {
-        visits: {
-          take: 1,
-          orderBy: { date: 'desc' }
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      prisma.patient.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          visits: {
+            take: 1,
+            orderBy: { date: 'desc' }
+          }
         }
+      }),
+      prisma.patient.count({ where: whereClause })
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
       }
-    });
+    };
   }
 
   async getPatientById(organizationId: string, id: string) {

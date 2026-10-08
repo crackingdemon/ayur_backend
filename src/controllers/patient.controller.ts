@@ -66,15 +66,17 @@ const diagnosisSchema = z.object({
 });
 
 export class PatientController {
-  async getAll(req: Request, res: Response) {
+  async getAll(req: Request, res: Response, next: import('express').NextFunction) {
     try {
       const orgId = req.user!.organizationId;
       const search = req.query.search as string;
-      const patients = await patientService.getAllPatients(orgId, search);
-      res.json(patients);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      const result = await patientService.getAllPatients(orgId, search, page, limit);
+      res.json(result);
     } catch (error) {
-      console.error('Error fetching patients:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+      next(error);
     }
   }
 

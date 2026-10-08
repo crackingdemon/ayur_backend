@@ -1,7 +1,10 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 import { prisma } from './lib/prisma';
+import { logger } from './utils/logger';
 import { patientRoutes } from './routes/patient.routes';
 import { appointmentRoutes } from './routes/appointment.routes';
 import { inventoryRoutes } from './routes/inventory.routes';
@@ -12,11 +15,14 @@ import { billingRoutes } from './routes/billing.routes';
 import facilityRoutes from './routes/facility.routes';
 import { userRoutes } from './routes/user.routes';
 import { panchakarmaRoutes } from './routes/panchakarma.routes';
+import { errorHandler } from './middlewares/errorHandler.middleware';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5000;
+
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.split(',') 
@@ -29,16 +35,18 @@ app.use(cors({
     } else {
       callback(new Error('Not allowed by CORS'));
     }
-  }
+  },
+  credentials: true
 }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.get('/api/health', async (req: Request, res: Response) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'ok', database: 'connected' });
   } catch (error) {
-    console.error('Database connection error:', error);
+    logger.error('Database connection error:', error);
     res.status(500).json({ status: 'error', database: 'disconnected' });
   }
 });
@@ -65,11 +73,14 @@ app.get('/api/health', async (req: Request, res: Response) => {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'ok', database: 'connected' });
   } catch (error) {
-    console.error('Database connection error:', error);
+    logger.error('Database connection error:', error);
     res.status(500).json({ status: 'error', database: 'disconnected' });
   }
 });
 
+// Global Error Handler should be the last middleware
+app.use(errorHandler);
+
 app.listen(port as number, '0.0.0.0', () => {
-  console.log(`Server is running on port ${port}`);
+  logger.info(`Server is running on port ${port}`);
 });

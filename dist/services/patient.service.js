@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.patientService = exports.PatientService = void 0;
 const prisma_1 = require("../lib/prisma");
 class PatientService {
-    async getAllPatients(organizationId, search) {
+    async getAllPatients(organizationId, search, page = 1, limit = 50) {
         const whereClause = { organizationId, deletedAt: null };
         if (search) {
             whereClause.OR = [
@@ -11,16 +11,31 @@ class PatientService {
                 { phone: { contains: search, mode: 'insensitive' } },
             ];
         }
-        return prisma_1.prisma.patient.findMany({
-            where: whereClause,
-            orderBy: { updatedAt: 'desc' },
-            include: {
-                visits: {
-                    take: 1,
-                    orderBy: { date: 'desc' }
+        const skip = (page - 1) * limit;
+        const [data, total] = await Promise.all([
+            prisma_1.prisma.patient.findMany({
+                where: whereClause,
+                skip,
+                take: limit,
+                orderBy: { updatedAt: 'desc' },
+                include: {
+                    visits: {
+                        take: 1,
+                        orderBy: { date: 'desc' }
+                    }
                 }
+            }),
+            prisma_1.prisma.patient.count({ where: whereClause })
+        ]);
+        return {
+            data,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
             }
-        });
+        };
     }
     async getPatientById(organizationId, id) {
         return prisma_1.prisma.patient.findFirst({

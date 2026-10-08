@@ -118,6 +118,9 @@ model Patient {
   invoices        Invoice[]
   prescriptions   Prescription[]
   panchakarma     PanchakarmaTreatment[]
+
+  @@index([organizationId, name])
+  @@index([organizationId, phone])
 }
 
 model Visit {
@@ -147,6 +150,10 @@ model Visit {
   diagnosis      Diagnosis?
   prescription   Prescription?
   panchakarma    PanchakarmaTreatment[]
+
+  @@index([organizationId, patientId])
+  @@index([organizationId, date])
+  @@index([organizationId, doctor])
 }
 
 model ModernEMR {
@@ -254,6 +261,9 @@ model Prescription {
   facility       Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   items          PrescriptionItem[]
   invoice        Invoice?
+
+  @@index([organizationId, patientId])
+  @@index([organizationId, status])
 }
 
 model PrescriptionItem {
@@ -312,6 +322,10 @@ model Invoice {
   panchakarmaId  String?      @unique
   panchakarma    PanchakarmaTreatment? @relation(fields: [panchakarmaId], references: [id], onDelete: SetNull)
   items          InvoiceItem[]
+
+  @@index([organizationId, patientId])
+  @@index([organizationId, status])
+  @@index([organizationId, date])
 }
 
 model FinancialTransaction {
